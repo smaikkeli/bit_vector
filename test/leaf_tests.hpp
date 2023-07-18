@@ -192,7 +192,7 @@ void leaf_select_test(uint64_t n) {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(8);
     for (uint64_t i = 0; i < n; i++) {
-        l->insert(0, bool(i & uint64_t(1)));
+        l->insert(0, i % 2);
         if (l->need_realloc()) {
             uint64_t cap = l->capacity();
             l = allocator->template reallocate_leaf<leaf>(l, cap, 2 * cap);

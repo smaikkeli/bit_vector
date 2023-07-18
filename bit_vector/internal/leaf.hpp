@@ -2491,7 +2491,6 @@ class leaf : uncopyable {
     }
 
     uint32_t c_select(uint32_t x) const {
-        // std::cout << "c_select(" << x << ") called" << std::endl;
         bool val = type_info_ & C_ONE_MASK;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
         uint8_t b_idx = 0;
@@ -2554,7 +2553,7 @@ class leaf : uncopyable {
             b_idx++;
             e_index = b_idx < buffer_count_ ? buffer_[b_idx] & C_INDEX : 0;
         }
-        if (c_i >= size_) {
+        if (c_i > size_) {
             return size_;
         }
         return --c_i;
@@ -2619,9 +2618,6 @@ class leaf : uncopyable {
             if (count == x) break;
             b_idx++;
             e_index = b_idx < buffer_count_ ? buffer_[b_idx] & C_INDEX : 0;
-        }
-        if (c_i >= size_) {
-            return size_;
         }
         return --c_i;
     }

@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <iostream>
 #include <utility>
 
 #include "query_support.hpp"

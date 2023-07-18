@@ -107,6 +107,10 @@ TEST(RleLeaf, Remove) { rle_leaf_remove_test<rll, ma>(200, 100); }
 
 TEST(RleLeaf, Set) { rle_leaf_set_test<rll, ma>(200, 100); }
 
+TEST(RleLeaf, Select) { rle_leaf_select_test<rll, ma>(10000); }
+
+TEST(RleLeaf, Select0) { rle_leaf_select0_test<rll, ma>(10000); }
+
 TEST(RleLeaf, CapCalculation) { rle_leaf_cap_calculation_test<rll, ma>(); }
 
 TEST(RleLeaf, SetCalculations) { rle_leaf_set_calculations_test<rll, ma>(); }

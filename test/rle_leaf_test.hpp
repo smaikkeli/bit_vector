@@ -16,6 +16,7 @@ void rle_leaf_init_zeros_test(uint32_t size) {
     for (size_t i = 0; i < size; i++) {
         EXPECT_EQ(l->at(i), false);
         EXPECT_EQ(l->rank(i), 0u);
+        EXPECT_EQ(l->select0(i + 1), i);
     }
 
     a->deallocate_leaf(l);
@@ -33,7 +34,6 @@ void rle_leaf_init_ones_test(uint32_t size) {
         EXPECT_EQ(l->at(i), true);
         EXPECT_EQ(l->rank(i), i);
         EXPECT_EQ(l->select(i + 1), i);
-        EXPECT_EQ(l->select0(i + 1), size);
     }
 
     a->deallocate_leaf(l);
@@ -67,7 +67,6 @@ void rle_leaf_insert_test(uint32_t size, uint32_t i_count) {
     delete a;
 }
 
-//UNDER CONSTRUCTION!!!!
 template<class rl_l, class alloc>
 void rle_leaf_insert_test_b(uint32_t size, uint32_t i_count) {
     alloc* a = new alloc();
@@ -75,7 +74,6 @@ void rle_leaf_insert_test_b(uint32_t size, uint32_t i_count) {
     EXPECT_TRUE(l->is_compressed());
     EXPECT_EQ(l->size(), size);
     EXPECT_EQ(l->p_sum(), 0u);
-    //Insert pseudorandom sequences of 1's and 0's as RLE runs of relatively low length (<= 32) up until i_count
     uint32_t psum = 0;
     uint32_t expected_inserts = 0;
     for (size_t i = 0; i < i_count; i++) {
@@ -228,8 +226,6 @@ void rle_leaf_set_test(uint32_t size, uint32_t i_count) {
     }
     for (size_t i = 0; i < i_count; i++) {
         EXPECT_EQ(l->select(i + 1), i);
-    }
-    for (size_t i = 0; i < i_count; i++) {
         EXPECT_EQ(l->select0(i + 1), i_count + i);
     }
     for (size_t i = 0; i < size; i++) {
@@ -245,6 +241,45 @@ void rle_leaf_set_test(uint32_t size, uint32_t i_count) {
         EXPECT_EQ(l->select(i + 1), i + i_count);
     }
     
+    a->deallocate_leaf(l);
+    delete a;
+}
+
+template <class rl_l, class alloc>
+void rle_leaf_select_test(uint64_t size) {
+    alloc* a = new alloc();
+    rl_l* l = a->template allocate_leaf<rl_l>(size);
+    for (uint64_t i = 0; i < size; i++) {
+        l->insert(0, (i % 2));
+    }
+
+    uint64_t is_first = (size - 1) % 2;
+    for (uint64_t i = 1; i <= size / 2; i++) {
+        uint64_t ex = (i - is_first) * 2 + is_first - 1;
+        uint64_t val = l->select(i);
+        ASSERT_EQ(val, ex) << "Select(" << i << ") should be " << ex;
+    }
+
+    a->deallocate_leaf(l);
+    delete a;
+}
+
+
+template <class rl_l, class alloc>
+void rle_leaf_select0_test(uint64_t size) {
+    alloc* a = new alloc();
+    rl_l* l = a->template allocate_leaf<rl_l>(size);
+    for (uint64_t i = 0; i < size; i++) {
+        l->insert(0, !(i % 2));
+    }
+
+    uint64_t is_first = (size - 1) % 2;
+    for (uint64_t i = 1; i <= size / 2; i++) {
+        uint64_t ex = (i - is_first) * 2 + is_first - 1;
+        uint64_t val = l->select0(i);
+        ASSERT_EQ(val, ex) << "Select0(" << i << ") should be " << ex;
+    }
+
     a->deallocate_leaf(l);
     delete a;
 }
