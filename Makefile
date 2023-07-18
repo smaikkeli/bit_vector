@@ -11,6 +11,8 @@ HEADERS = bit_vector/internal/node.hpp bit_vector/internal/allocator.hpp \
 		  bit_vector/internal/packed_array.hpp \
 		  bit_vector/internal/gap_leaf.hpp
 
+OHC = one_hot_cram/ohc.hpp
+
 SDSL = -isystem deps/sdsl-lite/include -Ldeps/sdsl-lite/lib
 
 GTEST_DIR = deps/googletest/googletest
@@ -39,6 +41,9 @@ bv_debug: bv_debug.cpp $(HEADERS) test/run_tests.hpp test/gtest_main.a
 	make -C deps/sdsl-lite
 	g++ $(CFLAGS) $(INCLUDE) -DDEBUG $(SDSL) $(GFLAGS) -g -o bv_debug bv_debug.cpp -lsdsl
 
+ohc_test: onehotcram_test.cpp one_hot_cram/ohc.hpp 
+	g++ $(CFLAGS) $(OHC) -DNDEBUG -Ofast -o ohc_test onehotcram_test.cpp
+
 bench: bench.cpp $(HEADERS)
 	make -C deps/sdsl-lite
 	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG $(SDSL) -Ofast -o bench bench.cpp -lsdsl
@@ -65,6 +70,8 @@ leaf_michrobench: leaf_michrobench.cpp $(HEADERS)
 bit_vector/%.hpp:
 
 bit_vector/internal/%.hpp:
+
+one_hot_cram/%.hpp:
 
 test/%.hpp:
 
