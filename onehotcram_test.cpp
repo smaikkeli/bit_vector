@@ -11,8 +11,10 @@
 #include "bit_vector/bv.hpp"
 
 int main (int argc, char *argv[]) {
-  onehotcram<char, bv::simple_bv<16, 16384, 64, true, true>> onehot(256);
-  std::cout << onehot.size() << std::endl;
+  onehotcram onehot;
+  char a = 65;
+  onehot.insert(0, a);
+  std::cout << onehot.at(0) << std::endl;
 
   return 0;
 };
