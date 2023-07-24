@@ -10,7 +10,7 @@ class onehotcram{
   private: 
     size_t size_ {0};  //The size of the container
     size_t alphabet_size_ {static_cast<size_t>(std::numeric_limits<dtype>::max()) + 1}; //The number of possible values for dtype
-    uint64_t* alphabet_bits {new uint64_t [alphabet_size_]}; //Starting index for each character, alphabet_bits[0] = 0
+    uint32_t* alphabet_bits {new uint32_t [alphabet_size_]}; //Starting index for each character, alphabet_bits[0] = 0
     bit_vector* bv {new bit_vector}; //Pointer to the bitvector beneath the cumulative sums
 
   public:
@@ -19,18 +19,15 @@ class onehotcram{
 
     // @brief Constructor, allows defining an initial size
     onehotcram(size_t input_size) : size_(input_size) {
-      uint64_t bv_size = input_size*alphabet_size_;
-        
-        //fill bitvector
-        for (uint64_t i = 0; i < bv_size; i++) {
-          bv->insert(0,0);
-        } 
-        
-        //write number of bits used for each character
-        for (uint64_t i = 0; i < alphabet_size_; i++) {
+    
+      for (size_t i = 0; i<alphabet_size_; i++) {
+          for (size_t j = 0; j < input_size; i++) {
+            bv->insert(0,0);
+          }
+          //Cumulative bits used for each index
           alphabet_bits[i] = i*input_size;
-        }
       }
+    }
 
     size_t bv_size() const {
       return bv->size();
@@ -43,75 +40,76 @@ class onehotcram{
     size_t alphabet_size() const {
       return alphabet_size_;
     }
-
+    
+    /*
+     * @brief Retrieves the value of the index<sup>th</sup> element in the data 
+     * structure.
+     *
+     * @return dtype value of the index<sup>th</sup> element.
+     */
     dtype at(uint32_t index) {
+      size_t element = 0;
       for (size_t i = 0; i < alphabet_size_; i++) {
         //std::cout << bv->at(alphabet_bits[i] + index) << std::endl;
-        bool val = bv->at(alphabet_bits[i] + index);
-        if (val) {
-          return static_cast<dtype>(i);
-        } 
+        element = bv->at(alphabet_bits[i] + index) ? i : element;
       }
+      return static_cast<dtype>(element);
     }
-
+    
+    /*
+     * @brief Insert "value" into position "index".
+     *
+     * @param index Where should `value` be inserted
+     * @param value What should be inserted at `index`
+    */
     void insert(uint32_t index, dtype elem) {
-
-      if (size_ == 0) {
-        std::cout << "size is 0 " << std::endl;
-        for (size_t i = 0; i < alphabet_size_; i++) {
-          bv->insert(i, (i == size_t(elem)));
-          if (i == size_t(elem)) {
-            std::cout << " inserted element " << elem << " at bitvector index " << i << std::endl; 
-          }
-          alphabet_bits[i] = i;
-          std::cout << "Starting bit for element " << static_cast<dtype>(i) << " is " << alphabet_bits[i] << std::endl;
-        }
-      } else { 
-         //Loop through each element in the alphabet, add 0 or 1 
-         for (size_t i = 0; i < alphabet_size_ - 1; i++) {
-          if (i == size_t(elem)) {
-           std::cout << i << " == " << size_t(elem) << std::endl;
-           std::cout << alphabet_bits[i] + index  << " is the bitvector index" << std::endl;
-          }
-          bv->insert((alphabet_bits[i] + index), (i == size_t(elem)));
-          alphabet_bits[i + 1]++;
-          //Increment the next index, as insert(i) moves each j >= i by 1 
-        }
-      } 
-      bv->insert(alphabet_bits[alphabet_size_-1], ((alphabet_size_ - 1) == size_t(elem)));
       size_++;
-    }
+      //Loop through each element in the alphabet, add 0 or 1 
+      bv->insert((alphabet_bits[0] + index), (0 == size_t(elem)));
+         
+      for (size_t i = 1; i < alphabet_size_; i++) {
+        
+        //compressed_size = bv[index < x < index + size_] << 
 
-    bool remove(uint64_t index) {
-      for (size_t i = 0; i < alphabet_size_; i++) {
-        uint32_t bv_index = alphabet_bits[i] + index;
-        if (bv->at(bv_index)) {
-             return bv->remove(bv_index);
-            }
+        alphabet_bits[i] = alphabet_bits[i-1] + size_;
+
+        bv->insert((alphabet_bits[i] + index), (i == size_t(elem)));
       }
-      return false;
     }
 
-    void set(uint64_t index, dtype elem) {
+    dtype remove(uint32_t index) {
+      size_--;
+      
+      uint32_t current_bits = 0;
+      size_t element = 0;
+
+      bv->remove(alphabet_bits[0] + index);
+
+      for (size_t i = 1; i < alphabet_size_; i++) {
+        
+        //Calculate number of bits required to store all information
+        current_bits = size_;
+
+        alphabet_bits[i] = alphabet_bits[i - 1] + current_bits;
+
+        element = bv->remove(alphabet_bits[i] + index) ? i : element;
+      }
+
+      return static_cast<dtype>(element);
+    }
+
+    void set(uint32_t index, dtype elem) {
       for (size_t i = 0; i < alphabet_size_; i++) {
-        uint32_t bv_index = alphabet_bits[i] + index;
-        //Unset the old value
-        if (bv->at(bv_index)) {
-          bv->set((bv_index), false);
-        }
-        //Set the new value
-        if (i == size_t(elem)) {
-          bv->set((bv_index), true);
-        }
+        bv->set((alphabet_bits[i] + index), (i == size_t(elem)));
       }
     }
     
-    uint64_t rank(dtype elem) {
+    uint32_t rank(dtype elem) {
       return bv->rank(alphabet_bits[elem] + size_) - bv->rank(alphabet_bits[elem]);
     }
 
-    uint64_t select(uint64_t index) {
-      return 0;
+    uint32_t select(uint32_t index, dtype elem) {
+      return bv->select(rank(alphabet_bits[elem]) + index) - alphabet_bits[elem]; 
     }
 
 };

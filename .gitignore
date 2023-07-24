@@ -38,6 +38,8 @@ queries
 comp_bench
 leaf_michrobench
 leaf_comp
+rem_bench
+ohc_test
 
 # IDE stuff
 .vscode/*
@@ -70,3 +72,7 @@ benchmarking/b*
 #notebooks
 .ipynb_checkpoints/
 *.ipynb
+
+#clangd
+.cache/
+compile_commands.json

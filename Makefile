@@ -35,7 +35,7 @@ COVERAGE = -g
 
 cover: COVERAGE = --coverage -O0 -g
 
-all: bv_debug bench brute
+all: bv_debug bench ohc_test
 
 bv_debug: bv_debug.cpp $(HEADERS) test/run_tests.hpp test/gtest_main.a
 	make -C deps/sdsl-lite
