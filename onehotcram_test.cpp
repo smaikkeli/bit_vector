@@ -1,4 +1,5 @@
 
+#include <cstdint>
 #include <sys/resource.h>
 
 #include <cassert>
@@ -14,16 +15,14 @@
 typedef bv::simple_bv<16, 16384, 64, true, true, true> rle_bv;
 
 int main (int argc, char *argv[]) {
-  std::string test = "banana";
-  if (argc == 2) {
-    test = argv[1];
-  }
+  std::string test = "persereika";
 
   onehotcram<char, bv::bv> onehot;
+
   
   for (size_t i = 0; i<test.size(); i++) {
-        onehot.insert(i, test[i]);
-    }
+    onehot.insert(i, test[i]);
+  }
   std::cout << "alphabet size: " << onehot.alphabet_size() << std::endl;
   std::cout << "size of the datastructure: " << onehot.size() << std::endl;
   std::cout << "bitvector size: " << onehot.bv_size() << std::endl;
@@ -31,22 +30,23 @@ int main (int argc, char *argv[]) {
     std::cout << onehot.at(i);
   }
   
-  std::cout << "\nremoved the letter " << onehot.remove(0) << std::endl;
-  onehot.set(0, 'a');
+  onehot.remove(0);
+  std::cout << "\nremoved the letter at index 0" << std::endl;
 
   for (size_t i = 0; i < onehot.size(); i++ ) {
     std::cout << onehot.at(i);
   }
 
-  std::cout << "\nset index 0 to 'a'" << std::endl;
+  onehot.set(0, 'p');
+  std::cout << "\nset index 0 to 5" << std::endl;
 
   for (size_t i = 0; i < onehot.size(); i++ ) {
     std::cout << onehot.at(i);
   }
 
-  std::cout << "\nNumber of a's: " << onehot.rank('a') << std::endl;
+  std::cout << "\nNumber of 3's: " << onehot.rank('e') << std::endl;
 
-  std::cout << "Position of the 3rd a in: " << onehot.select(3, 'a') << std::endl;
+  std::cout << "Position of the 2nd 3 in: " << onehot.select(2, 'e') << std::endl;
 
   return 0;
 };

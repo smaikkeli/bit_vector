@@ -4,25 +4,24 @@
 
 typedef bv::simple_bv<16, 16384, 64, true, true, true> rle_bv;
 
- //One hot cram one-hot encodes each of the characters in a given string
 template<typename dtype = char, class bit_vector = rle_bv>
 class onehotcram{
   private: 
-    size_t size_ {0};  //The size of the container
-    size_t alphabet_size_ {static_cast<size_t>(std::numeric_limits<dtype>::max()) + 1}; //The number of possible values for dtype
-    uint32_t* alphabet_bits {new uint32_t [alphabet_size_]}; //Starting index for each character, alphabet_bits[0] = 0
-    bit_vector* bv {new bit_vector}; //Pointer to the bitvector beneath the cumulative sums
+    size_t size_ {0};  //The size of onehotcram
+    static const size_t alphabet_size_ {static_cast<size_t>(std::numeric_limits<dtype>::max()) + 1}; //The number of possible values for dtype
+    uint32_t alphabet_bits[alphabet_size_]; 
+    bit_vector bv;
 
   public:
     // @brief Default constructor, initializes the size to 0
-    onehotcram() {}
+    onehotcram() : alphabet_bits(), bv() {}
 
     // @brief Constructor, allows defining an initial size
-    onehotcram(size_t input_size) : size_(input_size) {
+    onehotcram(size_t input_size) : alphabet_bits(), bv(), size_(input_size) {
     
       for (size_t i = 0; i<alphabet_size_; i++) {
-          for (size_t j = 0; j < input_size; i++) {
-            bv->insert(0,0);
+          for (size_t j = 0; j < input_size; j++) {
+            bv.insert(0,0);
           }
           //Cumulative bits used for each index
           alphabet_bits[i] = i*input_size;
@@ -30,7 +29,7 @@ class onehotcram{
     }
 
     size_t bv_size() const {
-      return bv->size();
+      return bv.size();
     }
     
     size_t size() const {
@@ -48,14 +47,14 @@ class onehotcram{
      * @return dtype value of the index<sup>th</sup> element.
      */
     dtype at(uint32_t index) {
-      size_t element = 0;
       for (size_t i = 0; i < alphabet_size_; i++) {
-        //std::cout << bv->at(alphabet_bits[i] + index) << std::endl;
-        element = bv->at(alphabet_bits[i] + index) ? i : element;
+        if (bv.at(alphabet_bits[i] + index)) {
+          return static_cast<dtype>(i);
+        }
       }
-      return static_cast<dtype>(element);
+      return static_cast<dtype>(0); 
     }
-    
+
     /*
      * @brief Insert "value" into position "index".
      *
@@ -65,7 +64,7 @@ class onehotcram{
     void insert(uint32_t index, dtype elem) {
       size_++;
       //Loop through each element in the alphabet, add 0 or 1 
-      bv->insert((alphabet_bits[0] + index), (0 == size_t(elem)));
+      bv.insert((alphabet_bits[0] + index), (0 == size_t(elem)));
          
       for (size_t i = 1; i < alphabet_size_; i++) {
         
@@ -73,17 +72,16 @@ class onehotcram{
 
         alphabet_bits[i] = alphabet_bits[i-1] + size_;
 
-        bv->insert((alphabet_bits[i] + index), (i == size_t(elem)));
+        bv.insert((alphabet_bits[i] + index), (i == size_t(elem)));
       }
     }
 
-    dtype remove(uint32_t index) {
+    void remove(uint32_t index) {
       size_--;
       
       uint32_t current_bits = 0;
-      size_t element = 0;
 
-      bv->remove(alphabet_bits[0] + index);
+      bv.remove(alphabet_bits[0] + index);
 
       for (size_t i = 1; i < alphabet_size_; i++) {
         
@@ -92,27 +90,24 @@ class onehotcram{
 
         alphabet_bits[i] = alphabet_bits[i - 1] + current_bits;
 
-        element = bv->remove(alphabet_bits[i] + index) ? i : element;
+        bv.remove(alphabet_bits[i] + index);
       }
-
-      return static_cast<dtype>(element);
     }
 
     void set(uint32_t index, dtype elem) {
       for (size_t i = 0; i < alphabet_size_; i++) {
-        bv->set((alphabet_bits[i] + index), (i == size_t(elem)));
+        bv.set((alphabet_bits[i] + index), (i == size_t(elem)));
       }
     }
     
     uint32_t rank(dtype elem) {
-      return bv->rank(alphabet_bits[elem] + size_) - bv->rank(alphabet_bits[elem]);
+      return bv.rank(alphabet_bits[size_t(elem)] + size_) - bv.rank(alphabet_bits[size_t(elem)]);
     }
 
     uint32_t select(uint32_t index, dtype elem) {
-      return bv->select(rank(alphabet_bits[elem]) + index) - alphabet_bits[elem]; 
+      return bv.select(rank(alphabet_bits[size_t(elem)]) + index) - alphabet_bits[size_t(elem)]; 
+      
     }
 
 };
 
-
-  
