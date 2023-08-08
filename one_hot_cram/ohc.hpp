@@ -8,14 +8,21 @@ typedef bv::simple_bv<16, 16384, 64, true, true, true> rle_bv;
 template<typename dtype = char, class bit_vector = rle_bv, int compression = 0>
 class onehotcram{
   private: 
-    size_t size_ {0};  //The size of onehotcram
-    static constexpr size_t alphabet_size_ 
-      {static_cast<size_t>(std::numeric_limits<dtype>::max()) + 1}; //The number of possible values for dtype
-    uint32_t alphabet_bits[alphabet_size_]; 
-    bit_vector bv;
+    /*The number of possible values in the alphabet*/
+    static constexpr size_t ALPHABET_SIZE =   
+      static_cast<size_t>(std::numeric_limits<dtype>::max()) + 1; 
+    /*Size of alphabet_bits, 0 if not compressed*/
+    
+    /*Initialize alphabet bits if compressed, else to 1 to avoid compilation warnings*/
+    uint32_t alphabet_bits[compression != 0 ? ALPHABET_SIZE : 1];
+
+    size_t size_ = 0;  ///< Number of elements stored 
+    bit_vector bv; ///<Bitvector where data is stored
+
+
 
   public:
-    // @brief Default constructor, initializes the size to 0
+    // @brief Default constructor
     onehotcram() : alphabet_bits(), bv() {}
 
     size_t bv_size() const {
@@ -27,7 +34,7 @@ class onehotcram{
     }
 
     size_t alphabet_size() const {
-      return alphabet_size_;
+      return ALPHABET_SIZE;
     }
     
     /*
@@ -41,8 +48,8 @@ class onehotcram{
         return at_c1(index);
       }
 
-      for (size_t i = 0; i < alphabet_size_; i++) {
-        if (bv.at(alphabet_bits[i] + index)) {
+      for (size_t i = 0; i < ALPHABET_SIZE; i++) {
+        if (bv.at(i*size_ + index)) {
           return static_cast<dtype>(i);
         }
       }
@@ -62,49 +69,33 @@ class onehotcram{
       }
 
       size_++;
-      //Insert the first element to 0 + index;
-      bv.insert(index, (0 == size_t(elem)));
-         
-      for (size_t i = 1; i < alphabet_size_; i++) {
-        
-        alphabet_bits[i] = alphabet_bits[i-1] + size_;
-
-        bv.insert((alphabet_bits[i] + index), (i == size_t(elem)));
+      for (size_t i = 0; i < ALPHABET_SIZE; i++) {
+        bv.insert((i*size_ + index), (i == size_t(elem)));
       }
     }
 
     void remove(uint32_t index) {
       if (compression == 1) {
-        return remove_c1(index);
+        return;
       }
       size_--;
-      
-      uint32_t current_bits = 0;
-
-      bv.remove(alphabet_bits[0] + index);
-
-      for (size_t i = 1; i < alphabet_size_; i++) {
-        
-        current_bits = size_;
-
-        alphabet_bits[i] = alphabet_bits[i - 1] + current_bits;
-
-        bv.remove(alphabet_bits[i] + index);
+      for (size_t i = 0; i < ALPHABET_SIZE; i++) {
+        bv.remove(size_*i + index);
       }
     }
 
     void set(uint32_t index, dtype elem) {
-      for (size_t i = 0; i < alphabet_size_; i++) {
-        bv.set((alphabet_bits[i] + index), (i == size_t(elem)));
+      for (size_t i = 0; i < ALPHABET_SIZE; i++) {
+        bv.set((size_*i + index), (i == size_t(elem)));
       }
     }
     
     uint32_t rank(dtype elem) {
-      return bv.rank(alphabet_bits[size_t(elem)] + size_) - bv.rank(alphabet_bits[size_t(elem)]);
+      return bv.rank(size_t(elem)*size_ + size_) - bv.rank(size_t(elem)*size_);
     }
 
     uint32_t select(uint32_t index, dtype elem) {
-      return bv.select(rank(alphabet_bits[size_t(elem)]) + index) - alphabet_bits[size_t(elem)]; 
+      return bv.select(bv.rank(size_t(elem)*size_) + index) - size_t(elem)*size_; 
       
     }
 
@@ -112,7 +103,7 @@ class onehotcram{
       
       uint32_t index_size = 0; 
       uint32_t offset = 0;
-      for (size_t i = 0; i < alphabet_size_ - 1; i++) {
+      for (size_t i = 0; i < ALPHABET_SIZE - 1; i++) {
         index_size = alphabet_bits[i+1] - alphabet_bits[i];
         offset = size_ - index_size; 
         if (index >= offset) {
@@ -122,11 +113,11 @@ class onehotcram{
         }
       }
       
-      index_size = bv.size() - alphabet_bits[alphabet_size_ - 1];
+      index_size = bv.size() - alphabet_bits[ALPHABET_SIZE - 1];
       offset = size_ - index_size;
       if (index >= offset) {
-        if (bv.at(alphabet_bits[alphabet_size_ - 1] - offset + index))
-          return static_cast<dtype>(alphabet_size_ - 1);
+        if (bv.at(alphabet_bits[ALPHABET_SIZE - 1] - offset + index))
+          return static_cast<dtype>(ALPHABET_SIZE - 1);
       } 
       return static_cast<dtype>(0);
     }
@@ -158,7 +149,7 @@ class onehotcram{
       
       alphabet_bits[1] += total_insertions;
 
-      for (size_t i = 1; i < alphabet_size_ - 1; i++) {
+      for (size_t i = 1; i < ALPHABET_SIZE - 1; i++) {
         
         index_size = int((alphabet_bits[i+1] + total_insertions) - alphabet_bits[i]) < 0 
           ? 0 
@@ -187,7 +178,7 @@ class onehotcram{
         alphabet_bits[i+1] += total_insertions;
       }
        
-      uint32_t last_elem = alphabet_size_ - 1;
+      uint32_t last_elem = ALPHABET_SIZE - 1;
       index_size = int(bv.size() - alphabet_bits[last_elem]) < 0 
           ? 0 
           : (bv.size() - alphabet_bits[last_elem]);
@@ -211,21 +202,6 @@ class onehotcram{
       }
       
       size_++;
-      
-      /*for (size_t i = 0; i < 5; i++) {
-        std::cout << i << ": " << alphabet_bits[i] << std::endl;
-      }*/
-      /*for (size_t i = 0; i < 5; i++) {
-        std::cout << unsigned(i) << ": ";
-        for (size_t j = alphabet_bits[i]; j < alphabet_bits[i+1]; j++) {
-          std::cout << bv.at(j) << " ";
-        } 
-        std::cout << ", starting location: " << alphabet_bits[i] << std::endl;
-      }*/
-    }
-
-    void remove_c1(uint32_t index) {
-        void(0);
     }
 };
 
