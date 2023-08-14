@@ -41,9 +41,6 @@ bv_debug: bv_debug.cpp $(HEADERS) test/run_tests.hpp test/gtest_main.a
 	make -C deps/sdsl-lite
 	g++ $(CFLAGS) $(INCLUDE) -DDEBUG $(SDSL) $(GFLAGS) -g -o bv_debug bv_debug.cpp -lsdsl
 
-ohc_test: onehotcram_test.cpp one_hot_cram/ohc.hpp 
-	g++ $(CFLAGS) $(OHC) -DNDEBUG -Ofast -o ohc_test onehotcram_test.cpp
-
 bench: bench.cpp $(HEADERS)
 	make -C deps/sdsl-lite
 	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG $(SDSL) -Ofast -o bench bench.cpp -lsdsl
@@ -66,6 +63,12 @@ rem_bench: rem_bench.cpp $(HEADERS)
 
 leaf_michrobench: leaf_michrobench.cpp $(HEADERS)
 	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG -g -Ofast -o leaf_michrobench leaf_michrobench.cpp
+
+ohc_test: onehotcram_test.cpp one_hot_cram/ohc.hpp 
+	g++ $(CFLAGS) $(OHC) -DNDEBUG -Ofast -o ohc_test onehotcram_test.cpp
+
+cram_bench: cram_bench.cpp $(HEADERS) one_hot_cram/ohc.hpp
+	g++ $(CFLAGS) $(OHC) -DNDEBUG -Ofast -o cram_bench cram_bench.cpp
 
 bit_vector/%.hpp:
 
