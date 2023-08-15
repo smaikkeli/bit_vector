@@ -23,14 +23,27 @@ class onehotcram{
     onehotcram() : alphabet_bits(), bv() {}
   
     // @brief Constructor for given data
-    onehotcram(const auto& text) : alphabet_bits(), bv() {
+    onehotcram(const auto& data) : alphabet_bits(), bv() {
+      size_ = data.size(); 
       size_t index = 0;
       for (size_t i = 0; i < ALPHABET_SIZE; i++) {
-        for (auto& j: text) {
-          bv.insert(index++, (size_t(j) == i));
+        bool first_one = false;
+        if constexpr (compression == 1) {
+          alphabet_bits[i] = index;
+          for (auto& j: data) {
+            if (!first_one && size_t(j) == i) {
+              first_one = true;
+            }
+            if (first_one) {
+              bv.insert(index++, size_t(j) == i);
+            }
+          }
+        } else {
+          for (auto& j: data) {
+            bv.insert(index++, size_t(j) == i);
+          }
         }
       }
-      size_ = text.size();
     }
 
     size_t bv_size() const {
@@ -85,6 +98,7 @@ class onehotcram{
     }
 
     void remove(uint32_t index) {
+
       if (compression == 1) {
         return remove_c1(index);
       }
@@ -126,7 +140,9 @@ class onehotcram{
           : bv.size() - alphabet_bits[i];
         
         uint32_t offset = size_ - index_size; 
-
+        
+        //Check each index with adjust to the offset
+        //No need to check leading zeros
         if (index >= offset) {
           if (bv.at(alphabet_bits[i] - offset + index)) {
             return static_cast<dtype>(i);
@@ -139,45 +155,29 @@ class onehotcram{
     
     void insert_c1(uint32_t index, dtype elem) {
 
-      uint32_t index_size = alphabet_bits[1] - alphabet_bits[0];
-
+      uint32_t index_size = 0;
       //Number of virtual leading zeros
-      uint32_t offset = size_ - index_size;
+      uint32_t offset = 0;
       uint32_t total_insertions = 0;
       
-      //No extra insertions needed
-      if (index > offset) {
-        bv.insert((index - offset), size_t(elem) == 0);
-        total_insertions++;
-      //Add missing zeros until correct index can be accessed
-      } else if (size_t(elem) == 0){
+      for (size_t i = 0; i < ALPHABET_SIZE; i++) {
+        
+        //Update starting point
+        alphabet_bits[i] += total_insertions;
 
-        uint32_t zero_insertions = offset - index;
-
-        while (zero_insertions > 0) {
-          bv.insert(0, 0);
-          total_insertions++;
-          zero_insertions--;
-        }
-
-        bv.insert(0, 1);
-        total_insertions++;
-      }
-      
-      //Starting index of the next alphabet entry in bv
-      alphabet_bits[1] += total_insertions;
-      
-      for (size_t i = 1; i < ALPHABET_SIZE - 1; i++) {
-      
         //Take previous insertions into account when calculating next size
-        index_size = (alphabet_bits[i+1] + total_insertions) - alphabet_bits[i];
-
+        index_size = i < ALPHABET_SIZE - 1 
+          ? (alphabet_bits[i+1] + total_insertions) - alphabet_bits[i]
+          : bv.size() - alphabet_bits[i];
+        
+        //Calculate offset from the left
         offset = size_ - index_size; 
-
+        
+        //Regular insertion if index is present
         if (index > offset) {
           bv.insert((alphabet_bits[i] + index - offset), size_t(elem) == i);
           total_insertions++;
-
+        //If not and 1 needs to be inserted, add missing zeros
         } else if (size_t(elem) == i) {
 
           uint32_t insertions = offset - index;
@@ -191,88 +191,40 @@ class onehotcram{
           bv.insert(alphabet_bits[i], 1);
           total_insertions++;
         }
-
-        alphabet_bits[i+1] += total_insertions;
       }
-      
-      uint32_t last_elem = ALPHABET_SIZE - 1;
-      index_size = bv.size() - alphabet_bits[last_elem];
-      offset = size_ - index_size;
-
-      if (index > offset) {
-        bv.insert((alphabet_bits[last_elem] + index - offset),
-            size_t(elem) == last_elem);
-      } else if (size_t(elem) == last_elem) {
-        
-        uint32_t zero_insertions = offset - index;
-
-        while (zero_insertions > 0) {
-          bv.insert(alphabet_bits[last_elem], 0);
-          zero_insertions--;
-        }
-
-        bv.insert(alphabet_bits[last_elem], 1);
-      } 
-
       size_++;
     }
 
     void remove_c1(uint32_t index) {
       
-      uint32_t index_size = alphabet_bits[1] - alphabet_bits[0];
-
+      uint32_t index_size = 0;
       //Number of virtual leading zeros
-      uint32_t offset = size_ - index_size;
+      uint32_t offset = 0;
       uint32_t total_removals = 0;
 
-      if (index >= offset) {
-        bv.remove(index - offset);
-        index_size--;
-        //Remove possible leading zeros
-        while (!bv.at(0) && index_size--) {
-          bv.remove(0);
-          total_removals++;
-        }
-      } 
-
-      alphabet_bits[1] -= total_removals;
-
-      for (size_t i = 1; i < ALPHABET_SIZE - 1; i++) {
-
+      for (size_t i = 0; i < ALPHABET_SIZE; i++) {
+        
+        //Adjust to the removals
         alphabet_bits[i] -= total_removals;
 
-        index_size = (alphabet_bits[i+1] - total_removals) - alphabet_bits[i];
+        index_size = i < ALPHABET_SIZE - 1
+          ? (alphabet_bits[i+1] - total_removals) - alphabet_bits[i]
+          : bv.size() - alphabet_bits[i];
 
         offset = size_ - index_size;
-
+        
+        //Removal only needed for the present bits
         if (index >= offset) {
           bv.remove(alphabet_bits[i] + index - offset);
           index_size--;
           total_removals++;
-
+          //Remove leading zeros, if any
           while (!bv.at(alphabet_bits[i]) && index_size--) {
             bv.remove(alphabet_bits[i]);
             total_removals++;
           }
         }
-        //Remove leading zeros 
-        alphabet_bits[i+1] -= total_removals;
       }
-       
-      uint32_t last_elem = ALPHABET_SIZE - 1;
-      index_size = bv.size() - alphabet_bits[last_elem];
-      offset = size_ - index_size;
-
-      if (index >= offset) {
-        bv.remove(alphabet_bits[last_elem] + index - offset);
-        index_size--;
-
-        while (!bv.at(alphabet_bits[last_elem]) && index_size--) {
-          bv.remove(alphabet_bits[last_elem]);
-        }
-      }
-
-      //The number of allowed removals before going over index 
       size_--;
     }
 
@@ -298,8 +250,14 @@ class onehotcram{
         
         //Set index to one if correct element
         if (i == size_t(elem)) {
-          if (index >= offset) {
-            //Adjust to the offset
+          //If the index is empty, one 1 needs to be added
+          if (index_size == 0 && index == offset) {
+            bv.insert(alphabet_bits[i], 1);
+            total_offset++;
+            [[unlikely]];
+          }
+          //If the index is within the present bits
+          else if (index > offset) {
             bv.set(alphabet_bits[i] + index - offset, 1);
           } else {
             //If index < offset, insert virtual zeros
@@ -315,12 +273,29 @@ class onehotcram{
         } else if (index >= offset) {
           bv.set(alphabet_bits[i] + index - offset, 0);
           //Remove leading zeros
-          while (!bv.at(alphabet_bits[i])) {
+          while (!bv.at(alphabet_bits[i]) && index_size != 0) {
             bv.remove(alphabet_bits[i]);
             total_offset--;
+            index_size--;
           }
         }
       }
+    }
+    
+    /*
+     *@brief Underlying bitvector compression ratio
+     *
+     * @return Underlying bitvector compression ratio
+    */
+    double get_bv_compression() const {
+      if (size_ == 0) {
+        return 0;
+      }
+      return static_cast<double>(bv.size()) / (ALPHABET_SIZE * size_);
+    }
+
+    double get_h0_entropy() {
+      return 0;
     }
 };
 
