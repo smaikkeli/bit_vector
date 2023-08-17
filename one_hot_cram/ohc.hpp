@@ -228,6 +228,7 @@ class onehotcram{
       size_--;
     }
 
+    
     void set_c1(uint32_t index, dtype elem) {
       
       uint32_t index_size = 0;
@@ -247,7 +248,7 @@ class onehotcram{
         
         //Number of virtual leading zeros
         offset = size_ - index_size;
-        
+
         //Set index to one if correct element
         if (i == size_t(elem)) {
           //If the index is empty, one 1 needs to be added
@@ -257,7 +258,10 @@ class onehotcram{
             [[unlikely]];
           }
           //If the index is within the present bits
-          else if (index > offset) {
+          if (index >= offset) {
+            std::cout << alphabet_bits[i] << "\n";
+            std::cout << "alphabet_bits[i]: " << alphabet_bits[i] << "\n"
+              << "offset: " << offset << "\nindex: " << index << "\ntotal_offset: " << total_offset << "\n";
             bv.set(alphabet_bits[i] + index - offset, 1);
           } else {
             //If index < offset, insert virtual zeros
@@ -273,7 +277,7 @@ class onehotcram{
         } else if (index >= offset) {
           bv.set(alphabet_bits[i] + index - offset, 0);
           //Remove leading zeros
-          while (!bv.at(alphabet_bits[i]) && index_size != 0) {
+          while (!bv.at(alphabet_bits[i]) && index_size > 0) {
             bv.remove(alphabet_bits[i]);
             total_offset--;
             index_size--;
@@ -281,7 +285,13 @@ class onehotcram{
         }
       }
     }
-    
+
+    void set_c1(auto& data, uint32_t index) {
+      for (auto& e: data) {
+        set_c1(index++, e); 
+      }
+    }
+
     /*
      *@brief Underlying bitvector compression ratio
      *
