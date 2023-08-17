@@ -64,11 +64,11 @@ rem_bench: rem_bench.cpp $(HEADERS)
 leaf_michrobench: leaf_michrobench.cpp $(HEADERS)
 	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG -g -Ofast -o leaf_michrobench leaf_michrobench.cpp
 
-ohc_test: onehotcram_test.cpp one_hot_cram/ohc.hpp 
-	g++ $(CFLAGS) $(OHC) -DNDEBUG -Ofast -o ohc_test onehotcram_test.cpp
+ohc_rle_bug: ohc_rle_bug.cpp one_hot_cram/ohc.hpp 
+	g++ $(CFLAGS) $(OHC) -DDEBUG -Ofast -o ohc_rle_bug ohc_rle_bug.cpp
 
 cram_bench: cram_bench.cpp $(HEADERS) one_hot_cram/ohc.hpp
-	g++ $(CFLAGS) $(OHC) -DNDEBUG -Ofast -o cram_bench cram_bench.cpp
+	g++ $(CFLAGS) $(OHC) -DDEBUG -Ofast -o cram_bench cram_bench.cpp
 
 bit_vector/%.hpp:
 

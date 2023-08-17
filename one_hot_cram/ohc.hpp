@@ -259,9 +259,6 @@ class onehotcram{
           }
           //If the index is within the present bits
           if (index >= offset) {
-            std::cout << alphabet_bits[i] << "\n";
-            std::cout << "alphabet_bits[i]: " << alphabet_bits[i] << "\n"
-              << "offset: " << offset << "\nindex: " << index << "\ntotal_offset: " << total_offset << "\n";
             bv.set(alphabet_bits[i] + index - offset, 1);
           } else {
             //If index < offset, insert virtual zeros
@@ -278,6 +275,13 @@ class onehotcram{
           bv.set(alphabet_bits[i] + index - offset, 0);
           //Remove leading zeros
           while (!bv.at(alphabet_bits[i]) && index_size > 0) {
+  #ifdef DEBUG
+            std::cerr << "alphabet_bits[i]: " << alphabet_bits[i] << "\n"
+              << "offset: " << offset << "\nindex: " << index << "\ntotal_offset: " << total_offset << "\n";
+            std::cerr << "Removing alphabet_bits[" << i << "] = " << alphabet_bits[i] << "\n";
+            std::cerr << " => bv[" << alphabet_bits[i] << "] = " << bv.at(alphabet_bits[i]) << std::endl; 
+
+  #endif // DEBUG
             bv.remove(alphabet_bits[i]);
             total_offset--;
             index_size--;
